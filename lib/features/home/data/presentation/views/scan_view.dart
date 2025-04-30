@@ -1,9 +1,12 @@
+import 'package:chem_tech_gravity_app/features/home/data/presentation/views/widgets/developer_footer.dart';
+import 'package:chem_tech_gravity_app/features/home/data/presentation/views/widgets/device_list.dart';
+import 'package:chem_tech_gravity_app/features/home/data/presentation/views/widgets/scan_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:get/get.dart' as getx;
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../../../../../core/utils/constants.dart';
-import '../../../../data/presentation/views/data_page.dart';
 import '../cubit/scan_cubit.dart';
 import '../cubit/scan_state.dart';
 
@@ -15,15 +18,28 @@ class ScanView extends StatefulWidget {
 }
 
 class _ScanViewState extends State<ScanView> {
-  bool hasScanned = false; // Track if user scanned at least once
-  DateTime? _lastPressedAt; // To track back press
+  bool hasScanned = false;
+  DateTime? _lastPressedAt;
 
-  // Start scanning method
+  @override
+  void initState() {
+    super.initState();
+    initPermissions();
+  }
+
+  Future<void> initPermissions() async {
+    await [
+      Permission.bluetooth,
+      Permission.bluetoothScan,
+      Permission.bluetoothConnect,
+      Permission.location,
+    ].request();
+  }
+
   void _startScan(BuildContext context) {
     context.read<ScanCubit>().startScan();
   }
 
-  // Show dialog when Bluetooth is off
   void _showBluetoothOffDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -43,23 +59,20 @@ class _ScanViewState extends State<ScanView> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => ScanCubit(),
+      create: (_) => ScanCubit(),
       child: WillPopScope(
         onWillPop: () async {
-          // Handle back button press
-          if (_lastPressedAt == null || DateTime.now().difference(_lastPressedAt!) > Duration(seconds: 2)) {
+          if (_lastPressedAt == null || DateTime.now().difference(_lastPressedAt!) > const Duration(seconds: 2)) {
             _lastPressedAt = DateTime.now();
-            // Show "Press back again to exit" Toast
             Fluttertoast.showToast(
               msg: "Press back again to exit",
-              toastLength: Toast.LENGTH_SHORT,
-              gravity: ToastGravity.BOTTOM,
               backgroundColor: kSecondaryColor,
               textColor: Colors.white,
+              gravity: ToastGravity.BOTTOM,
             );
-            return false; // Don't exit yet
+            return false;
           }
-          return true; // Exit the app
+          return true;
         },
         child: Scaffold(
           appBar: AppBar(
@@ -70,110 +83,40 @@ class _ScanViewState extends State<ScanView> {
             actions: [
               if (hasScanned)
                 IconButton(
-                  onPressed: () {
-                    _startScan(context); // Start scanning again when refresh is pressed
-                  },
                   icon: const Icon(Icons.refresh, color: kSecondaryColor),
+                  onPressed: () async {
+                    final state = await FlutterBluePlus.adapterState.first;
+                    if (state != BluetoothAdapterState.on) {
+                      _showBluetoothOffDialog(context);
+                    } else {
+                      _startScan(context);
+                    }
+                  },
                 ),
             ],
           ),
           body: BlocConsumer<ScanCubit, ScanState>(
             listener: (context, state) {
-              // Update scanned state based on the result
               if (state is ScanSuccess || state is ScanFailure) {
-                setState(() {
-                  hasScanned = true; // User has scanned at least once
-                });
+                setState(() => hasScanned = true);
               }
-
-              // Show Bluetooth off dialog if scanning fails
               if (state is ScanFailure) {
                 _showBluetoothOffDialog(context);
               }
             },
             builder: (context, state) {
-              // Show loading state
               if (state is ScanLoading) {
-                return const Center(
-                  child: CircularProgressIndicator(color: kSecondaryColor),
-                );
-              }
-              // Show success state and list of devices
-              else if (state is ScanSuccess) {
-                if (state.devices.isEmpty) {
-                  return const Center(child: Text("No devices found"));
-                }
-                return ListView.builder(
-                  itemCount: state.devices.length,
-                  itemBuilder: (context, index) {
-                    final device = state.devices[index].device;
-                    return ListTile(
-                      leading: const Icon(Icons.bluetooth, color: kSecondaryColor),
-                      title: Text(device.name.isEmpty ? "Unknown" : device.name),
-                      subtitle: Text(device.id.id),
-                      onTap: () {
-                        getx.Get.to(() => DataPage(device: device)); // Navigate to DataPage
-                      },
-                    );
-                  },
-                );
-              }
-              // Show scan button if no scan has been initiated
-              else {
-                return Center(
-                  child: GestureDetector(
-                    onTap: () {
-                      _startScan(context); // Start scanning
-                    },
-                    child: Container(
-                      width: 150,
-                      height: 150,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: kSecondaryColor,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.blueAccent.withOpacity(0.5),
-                            blurRadius: 20,
-                            spreadRadius: 5,
-                          ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'Scan',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
+                return const Center(child: CircularProgressIndicator(color: kSecondaryColor));
+              } else if (state is ScanSuccess && state.devices.isNotEmpty) {
+                return DeviceList(devices: state.devices);
+              } else if (state is ScanSuccess && state.devices.isEmpty) {
+                return const Center(child: Text("No devices found"));
+              } else {
+                return ScanButton(onTap: () => _startScan(context));
               }
             },
           ),
-          // Footer container with text and logo
-          bottomNavigationBar: Container(
-            color: Colors.grey[400], // Grey background
-            padding: const EdgeInsets.all(8.0),
-            child:const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Text
-                 Text(
-                  'Developed by Chem-Tech programming team',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 10,
-                  ),
-                ),
-
-              ],
-            ),
-          ),
+          bottomNavigationBar: const DeveloperFooter(),
         ),
       ),
     );

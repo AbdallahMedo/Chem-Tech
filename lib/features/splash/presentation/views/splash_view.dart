@@ -5,10 +5,8 @@ import '../../../../core/id/service_locator.dart';
 import '../../../../core/utils/assets.dart';
 import '../../../../core/utils/constants.dart';
 import '../../../home/data/presentation/views/scan_view.dart';
-import '../cupit/splash_cubit.dart';
-import '../cupit/splash_state.dart';
-
-
+import '../cubit/splash_cubit.dart';
+import '../cubit/splash_state.dart';
 
 class SplashView extends StatelessWidget {
   const SplashView({super.key});
@@ -56,12 +54,16 @@ class _SplashViewBodyState extends State<SplashViewBody>
     super.dispose();
   }
 
+  void _navigateToScanView() {
+    Get.off(() => const ScanView(), duration: kDuration);
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<SplashCubit, SplashState>(
       listener: (context, state) {
         if (state is SplashFinished) {
-          Get.off(() => const ScanView(), duration: kDuration);
+          _navigateToScanView();
         }
       },
       child: Scaffold(
@@ -70,22 +72,30 @@ class _SplashViewBodyState extends State<SplashViewBody>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              ScaleTransition(
-                scale: _scaleAnimation,
-                child: Image.asset(
-                  AssetsData.splashImage,
-                  height: 300,
-                  fit: BoxFit.contain,
-                ),
-              ),
+              _buildAnimatedLogo(),
               const SizedBox(height: 50),
-              const CircularProgressIndicator(
-                color: kSecondaryColor,
-              ),
+              _buildLoadingIndicator(),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildAnimatedLogo() {
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: Image.asset(
+        AssetsData.splashImage,
+        height: 300,
+        fit: BoxFit.contain,
+      ),
+    );
+  }
+
+  Widget _buildLoadingIndicator() {
+    return const CircularProgressIndicator(
+      color: kSecondaryColor,
     );
   }
 }
