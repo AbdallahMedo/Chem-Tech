@@ -1,5 +1,5 @@
 import 'package:flutter/animation.dart';
 
-const kPrimaryColor= Color(0xff102E50);
-const kSecondaryColor = Color(0xffCC8727);
+const kPrimaryColor= Color(0xffFFFFFF);
+const kSecondaryColor = Color(0xff663793);
 const kDuration = Duration(milliseconds: 300);

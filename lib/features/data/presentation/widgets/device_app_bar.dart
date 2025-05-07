@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../home/data/presentation/cubit/scan_cubit.dart';
-import '../../../home/data/presentation/cubit/scan_state.dart';
+import '../../../home/presentation/cubit/scan_cubit.dart';
+import '../../../home/presentation/cubit/scan_state.dart';
 
 AppBar buildDeviceAppBar(BuildContext context, String nameOrId) {
   return AppBar(
@@ -23,3 +23,4 @@ AppBar buildDeviceAppBar(BuildContext context, String nameOrId) {
     ],
   );
 }
+

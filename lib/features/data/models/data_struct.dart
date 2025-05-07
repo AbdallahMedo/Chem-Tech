@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-class DataStruct {
+class DataStruct  {
   int flag1;
   int flag2;
   int value1;
@@ -14,12 +14,27 @@ class DataStruct {
     required this.value2,
     required this.value3,
   });
+  DataStruct copyWith({
+    int? flag1,
+    int? flag2,
+    int? value1,
+    int? value2,
+    int? value3,
+  }) {
+    return DataStruct(
+      flag1: flag1 ?? this.flag1,
+      flag2: flag2 ?? this.flag2,
+      value1: value1 ?? this.value1,
+      value2: value2 ?? this.value2,
+      value3: value3 ?? this.value3,
+    );
+  }
 
   List<int> toBytes() {
     final data = ByteData(16);
     data.setUint8(0, '<'.codeUnitAt(0));
     data.setUint8(1, flag1);
-    data.setUint8(2, flag2);
+    data.setUint8(2, flag2,);
     data.setUint32(3, value1, Endian.little);
     data.setUint32(7, value2, Endian.little);
     data.setUint32(11, value3, Endian.little);
