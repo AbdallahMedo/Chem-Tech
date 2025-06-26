@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/get.dart';
-import 'package:video_player/video_player.dart';
 import '../../../../core/id/service_locator.dart';
+import '../../../../core/utils/assets.dart';
 import '../../../../core/utils/constants.dart';
-import '../../../../core/utils/spacing.dart';
 import '../../../home/presentation/views/scan_view.dart';
 import '../cubit/splash_cubit.dart';
 import '../cubit/splash_state.dart';
@@ -32,28 +31,12 @@ class _SplashViewBodyState extends State<SplashViewBody>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
-  late VideoPlayerController _videoController;
 
   @override
   void initState() {
     super.initState();
-    _initVideoPlayer();
+    initScaleAnimation();
   }
-
-  void _initVideoPlayer() {
-    _videoController = VideoPlayerController.asset('assets/images/logo.mp4')
-      ..initialize().then((_) {
-        setState(() {});
-        _videoController.play();
-
-        // Wait for 5 seconds, then navigate
-        Future.delayed(const Duration(seconds: 5), () {
-          _navigateToScanView();
-        });
-      });
-  }
-
-
 
   void initScaleAnimation() {
     _controller = AnimationController(
@@ -68,12 +51,11 @@ class _SplashViewBodyState extends State<SplashViewBody>
   @override
   void dispose() {
     _controller.dispose();
-    _videoController.dispose();
     super.dispose();
   }
 
   void _navigateToScanView() {
-    Get.off(() => const ScanView());
+    Get.off(() => const ScanView(), duration: kDuration);
   }
 
   @override
@@ -85,45 +67,35 @@ class _SplashViewBodyState extends State<SplashViewBody>
         }
       },
       child: Scaffold(
-        backgroundColor:const Color(0xFFBBB7AE),
-      // ✅ Replace with your video’s matching color
-        body: Stack(
-          children: [
-            // Full screen background color (automatically fills screen)
-            Positioned.fill(
-              child: Container(color: const Color(0xFFBBB7AE)),
-            ),
-            // Centered video with original aspect ratio
-            if (_videoController.value.isInitialized)
-              Center(
-                child: AspectRatio(
-                  aspectRatio: _videoController.value.aspectRatio,
-                  child: VideoPlayer(_videoController),
-                ),
-              ),
-          ],
+        backgroundColor: kPrimaryColor,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildAnimatedLogo(),
+              const SizedBox(height: 50),
+              _buildLoadingIndicator(),
+            ],
+          ),
         ),
       ),
     );
   }
 
-
-  Widget _buildVideo() {
-    return _videoController.value.isInitialized
-        ? SizedBox(
-      height: 300,
-      child: AspectRatio(
-        aspectRatio: _videoController.value.aspectRatio,
-        child: VideoPlayer(_videoController),
+  Widget _buildAnimatedLogo() {
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: Image.asset(
+        AssetsData.splashImage,
+        height: 300,
+        fit: BoxFit.contain,
       ),
-    )
-        : const SizedBox(height: 300);
+    );
   }
-
 
   Widget _buildLoadingIndicator() {
     return const CircularProgressIndicator(
-      color: kSecondaryColor,
+      color: Colors.orange,
     );
   }
 }

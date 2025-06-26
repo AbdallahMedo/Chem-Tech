@@ -3,11 +3,10 @@ import 'package:chem_tech_gravity_app/features/home/presentation/views/widgets/d
 import 'package:chem_tech_gravity_app/features/home/presentation/views/widgets/scan_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../../../../../core/utils/constants.dart';
-import '../../../../core/utils/dialog.dart';
-import '../../../../core/utils/toast.dart';
 import '../cubit/scan_cubit.dart';
 import '../cubit/scan_state.dart';
 
@@ -42,10 +41,18 @@ class _ScanViewState extends State<ScanView> {
   }
 
   void _showBluetoothOffDialog(BuildContext context) {
-    showAlertDialog(
+    showDialog(
       context: context,
-      title: 'Warning',
-      message: 'Bluetooth must be turned on to scan for devices.',
+      builder: (context) => AlertDialog(
+        title: const Text('Warning'),
+        content: const Text('Bluetooth must be turned on to scan for devices.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -55,20 +62,24 @@ class _ScanViewState extends State<ScanView> {
       create: (_) => ScanCubit(),
       child: WillPopScope(
         onWillPop: () async {
-          final now = DateTime.now();
-          if (_lastPressedAt == null || now.difference(_lastPressedAt!) > const Duration(seconds: 2)) {
-            _lastPressedAt = now;
-            showToast(message: "Press back again to exit");
+          if (_lastPressedAt == null || DateTime.now().difference(_lastPressedAt!) > const Duration(seconds: 2)) {
+            _lastPressedAt = DateTime.now();
+            Fluttertoast.showToast(
+              msg: "Press back again to exit",
+              backgroundColor: kSecondaryColor,
+              textColor: Colors.white,
+              gravity: ToastGravity.BOTTOM,
+            );
             return false;
           }
-          return true; // Allow the pop action (exit app)
+          return true;
         },
         child: Scaffold(
           appBar: AppBar(
             automaticallyImplyLeading: false,
             title: const Text('Bluetooth Devices'),
             centerTitle: true,
-            backgroundColor: Colors.white,
+            backgroundColor: Colors.transparent,
             actions: [
               if (hasScanned)
                 IconButton(
@@ -97,11 +108,11 @@ class _ScanViewState extends State<ScanView> {
               if (state is ScanLoading) {
                 return const Center(child: CircularProgressIndicator(color: kSecondaryColor));
               } else if (state is ScanSuccess && state.devices.isNotEmpty) {
-                return DeviceList(devices: state.devices);
+                return DeviceList(devices: state.devices,isScanning: false,onRefresh: ()=>_startScan(context),);
               } else if (state is ScanSuccess && state.devices.isEmpty) {
                 return const Center(child: Text("No devices found"));
               } else {
-                return ScanButton(onTap: () => _startScan(context));
+                return ScanButton(onTap: () => _startScan(context),isScanning: state is ScanLoading,);
               }
             },
           ),

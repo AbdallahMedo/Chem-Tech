@@ -18,7 +18,7 @@ class _SocialRowState extends State<SocialRow> {
     AssetsData.youtube: 'https://www.youtube.com/@chemtech8780',
   };
 
-  Future<void> _launchLink(BuildContext context, String url) async {
+  Future<void> _launchLink(BuildContext context, String url) async  {
     try {
       final uri = Uri.parse(url);
       debugPrint('Attempting to launch: $uri');
