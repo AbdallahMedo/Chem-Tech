@@ -23,7 +23,7 @@ class MechanicsView extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const PdfView(pdfAssetPath: 'assets/Photo-Gate.pdf'),
+                  builder: (_) => const PdfView(pdfAssetPath: 'assets/Free fall .pdf'),
                 ),
               );
             },

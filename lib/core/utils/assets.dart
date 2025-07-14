@@ -12,7 +12,7 @@ class AssetsData
   static const shade='assets/images/shade.png';
   static const counter='assets/images/counter.png';
   static const pendulum='assets/images/pendulum.png';
-  static const pdf='assets/images/Photo-Gate.pdf';
+  static const pdf='assets/Free fall .pdf';
   static const video='assets/images/Photo-Gate.pdf';
 }
 

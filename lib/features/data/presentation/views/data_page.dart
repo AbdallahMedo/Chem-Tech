@@ -260,20 +260,34 @@ class _DataPageState extends State<DataPage> {
         backgroundColor: kPrimaryColor,
         child: Column(
           children: [
-            DrawerHeader(child: Image.asset(AssetsData.logo1, height: 300, width: 300)),
-            _buildDrawerItem(AssetsData.runtime, "Run Time Mode", 1),
-            _buildDrawerItem(AssetsData.counter, "Count Mode", 2),
-            _buildDrawerItem(AssetsData.shade, "Shade Mode", 3),
-            _buildDrawerItem(AssetsData.pendulum, "Pendulum Mode", 4),
-            const Spacer(),
-            const Divider(),
+            DrawerHeader(
+              child: Center(
+                child: Image.asset(AssetsData.splashImage, height: 300, width: 300)
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                children: [
+                  _buildCardDrawerItem(Icons.play_circle_fill, "Run Time Mode", 1),
+                  _buildCardDrawerItem(Icons.plus_one, "Count Mode", 2),
+                  _buildCardDrawerItem(Icons.wb_shade, "Shade Mode", 3),
+                  _buildCardDrawerItem(Icons.sync, "Pendulum Mode", 4),
+                ],
+              ),
+            ),
+            const Divider(color: Colors.white30),
             const Padding(
               padding: EdgeInsets.all(12),
-              child: Text('Powered By © 2025 ChemTech', style: TextStyle(fontSize: 12, color: Colors.grey)),
+              child: Text(
+                'Powered By © 2025 ChemTech',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
             ),
           ],
         ),
       ),
+
       body: OrientationBuilder(
         builder: (context, orientation) {
           return LayoutBuilder(
@@ -318,7 +332,7 @@ class _DataPageState extends State<DataPage> {
                               ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: kSecondaryColor,
-                                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 30),
                               ),
                             ),
                           ],
@@ -368,19 +382,26 @@ class _DataPageState extends State<DataPage> {
     );
   }
 
-  ListTile _buildDrawerItem(String iconPath, String title, int mode) {
-    return ListTile(
-      title: Row(
-        children: [
-          Image.asset(iconPath, height: 30, width: 30),
-          Space.w10,
-          Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
-        ],
+  Widget _buildCardDrawerItem(IconData icon, String title, int mode) {
+    return Card(
+      color: kSecondaryColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Icon(icon, size: 30, color: Colors.white),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        onTap: () {
+          Navigator.pop(context);
+          _changeMode(mode);
+        },
       ),
-      onTap: () {
-        Navigator.pop(context);
-        _changeMode(mode);
-      },
     );
   }
+
 }

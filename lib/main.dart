@@ -11,8 +11,7 @@ import 'features/splash/presentation/views/splash_view.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Ensure all dependencies are registered before running the app
-  await setupServiceLocator(); // Register dependencies
+  await setupServiceLocator();
 
   runApp(const MyApp());
 }

@@ -95,7 +95,7 @@ class _SplashViewBodyState extends State<SplashViewBody>
 
   Widget _buildLoadingIndicator() {
     return const CircularProgressIndicator(
-      color: Colors.orange,
+      color: kSecondaryColor,
     );
   }
 }

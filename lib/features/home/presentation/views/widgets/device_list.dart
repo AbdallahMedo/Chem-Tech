@@ -2,7 +2,6 @@ import 'package:chem_tech_gravity_app/features/home/presentation/views/widgets/s
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:get/get.dart' as getx;
-
 import '../../../../data/presentation/widgets/bottom_navigation_bar.dart';
 
 class DeviceList extends StatefulWidget {
@@ -57,8 +56,32 @@ class _DeviceListState extends State<DeviceList> {
       ),
     );
   }
-
+  ///serial photo gate
   Future<void> _handleDeviceTap(BuildContext context, BluetoothDevice device) async {
+    final deviceName = device.name.trim();
+
+    /// Check for exact format: PhG_ct-FFFF where F is hex from 0000 to FFFF
+    final regex = RegExp(r'^PhG_ct-([0-9A-Fa-f]{1,4})$');
+    final match = regex.firstMatch(deviceName);
+
+    if (match == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This is not a Photo Gate device.')),
+      );
+      return;
+    }
+
+    /// Convert hex to decimal and check range
+    final hexPart = match.group(1)!;
+    final value = int.tryParse(hexPart, radix: 16);
+    if (value == null || value < 0 || value > 65535) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This is not a Photo Gate device.')),
+      );
+      return;
+    }
+
+    /// Proceed to connect if valid
     setState(() {
       _connectionStatuses[device.id.id] = ConnectionStatus.connecting;
     });
@@ -87,6 +110,37 @@ class _DeviceListState extends State<DeviceList> {
       );
     }
   }
+
+
+  // Future<void> _handleDeviceTap(BuildContext context, BluetoothDevice device) async {
+  //   setState(() {
+  //     _connectionStatuses[device.id.id] = ConnectionStatus.connecting;
+  //   });
+  //
+  //   try {
+  //     BluetoothConnectionState connectionState = await device.state.first;
+  //
+  //     if (connectionState == BluetoothConnectionState.connected) {
+  //       setState(() {
+  //         _connectionStatuses[device.id.id] = ConnectionStatus.connected;
+  //       });
+  //       _showAlreadyConnectedDialog(context);
+  //     } else {
+  //       await device.connect(autoConnect: false);
+  //       setState(() {
+  //         _connectionStatuses[device.id.id] = ConnectionStatus.connected;
+  //       });
+  //       getx.Get.to(() => BottomNavigationBarView(device));
+  //     }
+  //   } catch (e) {
+  //     setState(() {
+  //       _connectionStatuses[device.id.id] = ConnectionStatus.disconnected;
+  //     });
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text('Connection failed: ${e.toString()}')),
+  //     );
+  //   }
+  // }
 
   void _showAlreadyConnectedDialog(BuildContext context) {
     showDialog(

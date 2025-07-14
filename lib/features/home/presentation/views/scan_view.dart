@@ -1,3 +1,4 @@
+import 'package:app_settings/app_settings.dart';
 import 'package:chem_tech_gravity_app/features/home/presentation/views/widgets/developer_footer.dart';
 import 'package:chem_tech_gravity_app/features/home/presentation/views/widgets/device_list.dart';
 import 'package:chem_tech_gravity_app/features/home/presentation/views/widgets/scan_button.dart';
@@ -44,12 +45,24 @@ class _ScanViewState extends State<ScanView> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Warning'),
-        content: const Text('Bluetooth must be turned on to scan for devices.'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Bluetooth is Off',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: const Text('Please enable Bluetooth to scan for devices.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              AppSettings.openAppSettings(type: AppSettingsType.bluetooth);
+
+              Navigator.of(context).pop();
+            },
+            child: const Text('Settings'),
           ),
         ],
       ),
@@ -75,11 +88,16 @@ class _ScanViewState extends State<ScanView> {
           return true;
         },
         child: Scaffold(
+          backgroundColor: Colors.grey[200],
           appBar: AppBar(
+            elevation: 0,
             automaticallyImplyLeading: false,
-            title: const Text('Bluetooth Devices'),
-            centerTitle: true,
             backgroundColor: Colors.transparent,
+            title: const Text(
+              'Bluetooth Devices',
+              style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+            ),
+            centerTitle: true,
             actions: [
               if (hasScanned)
                 IconButton(
@@ -106,13 +124,83 @@ class _ScanViewState extends State<ScanView> {
             },
             builder: (context, state) {
               if (state is ScanLoading) {
-                return const Center(child: CircularProgressIndicator(color: kSecondaryColor));
+                return const Center(
+                  child: CircularProgressIndicator(color: kSecondaryColor),
+                );
               } else if (state is ScanSuccess && state.devices.isNotEmpty) {
-                return DeviceList(devices: state.devices,isScanning: false,onRefresh: ()=>_startScan(context),);
+                return DeviceList(
+                  devices: state.devices,
+                  isScanning: false,
+                  onRefresh: () => _startScan(context),
+                );
               } else if (state is ScanSuccess && state.devices.isEmpty) {
-                return const Center(child: Text("No devices found"));
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.bluetooth_disabled, size: 80, color: Colors.grey),
+                      const SizedBox(height: 20),
+                      const Text("No devices found", style: TextStyle(fontSize: 18)),
+                      const SizedBox(height: 20),
+                      ElevatedButton.icon(
+                        onPressed: () => _startScan(context),
+                        icon: const Icon(Icons.refresh,color: Colors.white,),
+                        label: const Text("Retry",style: TextStyle(color: Colors.white),),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kSecondaryColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
               } else {
-                return ScanButton(onTap: () => _startScan(context),isScanning: state is ScanLoading,);
+                return Center(
+                  child: Card(
+                    elevation: 8,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
+                      ),
+                    ),
+                    margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    color: Colors.white,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(24),
+                          topRight: Radius.circular(24),
+                        ),
+                        border: Border.all(color: Color(0xFFB0BEC5)), // Optional subtle border
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            "Tap below to start scanning",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          ScanButton(
+                            onTap: () => _startScan(context),
+                            isScanning: state is ScanLoading,
+                            foundDevices: state is ScanSuccess ? state.devices.length : 0,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+
               }
             },
           ),
