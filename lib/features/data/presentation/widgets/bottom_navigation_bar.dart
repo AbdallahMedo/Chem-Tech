@@ -1,5 +1,4 @@
 import 'package:chem_tech_gravity_app/features/data/presentation/views/data_page.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 

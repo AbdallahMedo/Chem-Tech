@@ -8,6 +8,7 @@ import '../../../../core/utils/toast.dart';
 import '../../../home/presentation/views/scan_view.dart';
 import '../../models/data_struct.dart';
 import '../widgets/data_form.dart';
+import '../widgets/shimmer_form.dart';
 
 class DataPage extends StatefulWidget {
   final BluetoothDevice device;
@@ -21,126 +22,166 @@ class DataPage extends StatefulWidget {
 class _DataPageState extends State<DataPage> {
   BluetoothCharacteristic? rxChar;
   BluetoothCharacteristic? txChar;
+  bool _dataReceived = false;
+  int _animationIndex = 0;
+  BluetoothConnectionState _currentConnectionState = BluetoothConnectionState.disconnected;
 
-  DataStruct receivedData = DataStruct(flag1: 0, flag2: 0, value1: 0, value2: 0, value3: 0);
+  DataStruct receivedData =
+  DataStruct(flag1: 0, flag2: 0, value1: 0, value2: 0, value3: 0);
+
   final flag1Controller = TextEditingController();
   final flag2Controller = TextEditingController();
   final value1Controller = TextEditingController();
   final value2Controller = TextEditingController();
   final value3Controller = TextEditingController();
 
-  bool isReceiving = false;
-
-  BluetoothDevice? currentConnectedDevice;
+  bool _adapterDialogShown = false;
+  bool _disconnectionDialogShown = false;
 
   @override
   void initState() {
     super.initState();
-    _listenToBluetoothAdapterState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _listenToConnectionStates();
+    });
     connectToDevice();
-    _listenForDisconnection();
   }
 
-  void _listenToBluetoothAdapterState() {
-    FlutterBluePlus.adapterState.listen((state) {
-      if (state == BluetoothAdapterState.off) {
-        showAlertDialog(
-          context: context,
-          title: 'Bluetooth is Off',
-          message: 'Please enable Bluetooth to continue using the app.',
-          onConfirm: () {
-            Navigator.of(context).push(MaterialPageRoute(builder: (context) => ScanView()));
-          },
+  void _listenToConnectionStates() {
+    FlutterBluePlus.adapterState.listen((adapterState) {
+      debugPrint('🔌 Bluetooth adapter state: $adapterState');
+
+      if (!mounted) return;
+
+      if (adapterState == BluetoothAdapterState.off) {
+        _adapterDialogShown = true;
+        _disconnectionDialogShown = true;
+
+        if (!_adapterDialogShown) {
+          _adapterDialogShown = true;
+          _showConnectionDialog(
+            title: 'Bluetooth is Off',
+            message: 'Please enable Bluetooth to continue.',
+          );
+        }
+      }
+      else if (adapterState == BluetoothAdapterState.on) {
+        _adapterDialogShown = false;
+        _disconnectionDialogShown = false;
+      }
+    });
+
+    widget.device.connectionState.listen((deviceState) async {
+      debugPrint("📴 Device connection state: $deviceState");
+
+      if (!mounted) return;
+
+      setState(() {
+        _currentConnectionState = deviceState;
+      });
+
+      if (FlutterBluePlus.adapterStateNow == BluetoothAdapterState.off) {
+        return;
+      }
+
+      if (deviceState == BluetoothConnectionState.connected) {
+        _disconnectionDialogShown = false;
+      }
+      else if (deviceState == BluetoothConnectionState.disconnected &&
+          !_disconnectionDialogShown) {
+        _disconnectionDialogShown = true;
+
+        await Future.delayed(const Duration(milliseconds: 300));
+
+        if (!mounted) return;
+
+        _showConnectionDialog(
+          title: 'Device Disconnected',
+          message: 'The Bluetooth device has been disconnected.',
         );
       }
     });
   }
-
-  Future<bool> isAlreadyConnected(BluetoothDevice device) async {
-    final state = await device.state.first;
-    return state == BluetoothDeviceState.connected;
+  void _showConnectionDialog({required String title, required String message}) {
+    showAlertDialog(
+      context: context,
+      title: title,
+      message: message,
+      onConfirm: () {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const ScanView()),
+              (route) => false,
+        );
+      },
+    );
   }
-
-  Future<void> connectToDeviceIfNotConnected(BuildContext context, BluetoothDevice newDevice) async {
-    final bool alreadyConnected = currentConnectedDevice != null && await isAlreadyConnected(currentConnectedDevice!);
-    if (alreadyConnected && currentConnectedDevice!.id != newDevice.id) {
-      showAlertDialog(
-        context: context,
-        title: 'Already Connected',
-        message: 'You are already connected to another device. Please disconnect it before connecting to a new one.',
-        onConfirm: () {
-          Navigator.of(context).pop();
-        },
-      );
-    } else {
-      try {
-        await newDevice.connect(autoConnect: false);
-        setState(() {
-          currentConnectedDevice = newDevice;
-        });
-        showToast(message: "Connected to ${newDevice.name}");
-      } catch (e) {
-        debugPrint("Failed to connect: $e");
-        showToast(message: "Connection failed.");
-      }
-    }
-  }
-
   Future<void> connectToDevice() async {
     try {
-      await widget.device.connect(autoConnect: false);
-      setState(() {
-        currentConnectedDevice = widget.device;
-      });
-    } catch (e) {
-      if (!e.toString().contains('already connected')) {
-        debugPrint('Connection error: $e');
-        return;
-      }
-    }
+      await widget.device.connect(autoConnect: false, timeout: const Duration(seconds: 15));
 
-    await Future.delayed(const Duration(seconds: 2));
-    List<BluetoothService> services = await widget.device.discoverServices();
+      if (!mounted) return;
 
-    for (var service in services) {
-      for (var characteristic in service.characteristics) {
-        if (characteristic.properties.write) rxChar = characteristic;
-        if (characteristic.properties.notify) {
-          txChar = characteristic;
-          await txChar!.setNotifyValue(true);
-          txChar!.lastValueStream.listen((value) async {
-            if (value.length == 16) {
-              final data = DataStruct.fromBytes(value);
-              setState(() {
-                receivedData = data;
-                flag1Controller.text = data.flag1.toString();
-                flag2Controller.text = data.flag2.toString();
-                value1Controller.text = data.value1.toString();
-                value2Controller.text = data.value2.toString();
-                value3Controller.text = (data.value3 * 0.001).toStringAsFixed(2);
-              });
+      await Future.delayed(const Duration(seconds: 2));
+      List<BluetoothService> services = await widget.device.discoverServices();
 
-              if (!isReceiving && data.flag1 >= 1 && data.flag1 <= 4) {
-                isReceiving = true;
-                debugPrint("Data reception started for mode ${data.flag1}.");
-                if ((data.flag1 == 1 || data.flag1 == 3) && data.flag2 == 1) {
-                  debugPrint("Device is already in Start Mode — live mode active.");
-                }
+      for (var service in services) {
+        for (var characteristic in service.characteristics) {
+          if (characteristic.properties.write) rxChar = characteristic;
+          if (characteristic.properties.notify) {
+            txChar = characteristic;
+            await txChar!.setNotifyValue(true);
+            txChar!.lastValueStream.listen((value) {
+              debugPrint("Raw value received: $value");
+              if (value.length == 16) {
+                final data = DataStruct.fromBytes(value);
+                debugPrint("Parsed: flag1=${data.flag1}, flag2=${data.flag2}");
+
+                setState(() {
+                  receivedData = data;
+                  _dataReceived = true;
+                  flag1Controller.text = data.flag1.toString();
+                  flag2Controller.text = data.flag2.toString();
+                  value1Controller.text = data.value1.toString();
+                  value2Controller.text = data.value2.toString();
+                  value3Controller.text =
+                      (data.value3 * 0.001).toStringAsFixed(2);
+                });
+              } else {
+                debugPrint("Received data with unexpected length: ${value.length}");
               }
-            }
-          });
+            });
+          }
         }
       }
+
+      if (rxChar != null) {
+        await rxChar!.write(
+          DataStruct(flag1: 0, flag2: 0, value1: 0, value2: 0, value3: 0).toBytes(),
+          withoutResponse: false,
+        );
+        debugPrint("Sent trigger data to request initial device response.");
+      }
+    } catch (e) {
+      debugPrint('Connection error: $e');
+      if (mounted && !_disconnectionDialogShown) {
+        _showDisconnectionDialog();
+      }
     }
-
-    /// 🟢 Send first mode automatically instead of showing dialog
-    final setup = DataStruct(flag1: 1, flag2: 2, value1: 0, value2: 0, value3: 0);
-    await rxChar?.write(setup.toBytes(), withoutResponse: false);
-    await Future.delayed(const Duration(milliseconds: 200));
-    await rxChar?.write(setup.toBytes(), withoutResponse: false);
   }
-
-
+  void _showDisconnectionDialog() {
+    _disconnectionDialogShown = true;
+    showAlertDialog(
+      context: context,
+      title: 'Connection Failed',
+      message: 'Could not connect to the device.',
+      onConfirm: () {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const ScanView()),
+              (route) => false,
+        );
+      },
+    );
+  }
   Future<void> sendData() async {
     if (rxChar == null) {
       showToast(message: "No writable characteristic found");
@@ -155,8 +196,7 @@ class _DataPageState extends State<DataPage> {
         value2: int.parse(value2Controller.text),
         value3: (double.parse(value3Controller.text) * 1000).round(),
       );
-      final bytes = dataStruct.toBytes();
-      await rxChar!.write(bytes, withoutResponse: false);
+      await rxChar!.write(dataStruct.toBytes(), withoutResponse: false);
     } catch (e) {
       showToast(message: "Failed to send: $e");
     }
@@ -174,13 +214,12 @@ class _DataPageState extends State<DataPage> {
         value3: receivedData.value3,
       );
       await rxChar!.write(updatedStruct.toBytes(), withoutResponse: false);
-      debugPrint("Sent flag2 = $flag2Value");
     } catch (e) {
       debugPrint("Error sending flag2: $e");
     }
   }
 
-  void handleModeAction() async {
+  void _handleModeAction() async {
     final f1 = receivedData.flag1;
     final f2 = receivedData.flag2;
 
@@ -189,7 +228,8 @@ class _DataPageState extends State<DataPage> {
       await sendFlag2(nextFlag2);
       if (nextFlag2 == 1) {
         setState(() {
-          receivedData = receivedData.copyWith(value1: 0, value2: 0, value3: 0);
+          receivedData =
+              receivedData.copyWith(value1: 0, value2: 0, value3: 0);
           value1Controller.text = '0';
           value2Controller.text = '0';
           value3Controller.text = '0.00';
@@ -200,7 +240,8 @@ class _DataPageState extends State<DataPage> {
       await Future.delayed(const Duration(milliseconds: 200));
       await sendFlag2(1);
       setState(() {
-        receivedData = receivedData.copyWith(value1: 0, value2: 0, value3: 0);
+        receivedData =
+            receivedData.copyWith(value1: 0, value2: 0, value3: 0);
         value1Controller.text = '0';
         value2Controller.text = '0';
         value3Controller.text = '0.00';
@@ -212,16 +253,28 @@ class _DataPageState extends State<DataPage> {
     flag1Controller.text = mode.toString();
     flag2Controller.text = '2';
     await sendData();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Switched to ${_getModeName(mode)}"),
+        backgroundColor: kSecondaryColor,
+        duration: const Duration(milliseconds: 800),
+      ),
+    );
   }
 
-  void _listenForDisconnection() {
-    widget.device.state.listen((state) {
-      if (state == BluetoothDeviceState.disconnected) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          showToast(message: 'The Bluetooth device has been disconnected. Please try again.');
-        });
-      }
-    });
+  String _getModeName(int mode) {
+    switch (mode) {
+      case 1:
+        return "Run Time";
+      case 2:
+        return "Count";
+      case 3:
+        return "Shade";
+      case 4:
+        return "Pendulum";
+      default:
+        return "Unknown";
+    }
   }
 
   @override
@@ -236,24 +289,16 @@ class _DataPageState extends State<DataPage> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
-    final deviceName = widget.device.name.isNotEmpty ? widget.device.name : widget.device.id.toString();
+    final deviceName = widget.device.name.isNotEmpty
+        ? widget.device.name
+        : widget.device.id.toString();
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
-        automaticallyImplyLeading: false,
         title: Text(deviceName),
-        leading: Builder(
-          builder: (context) {
-            return IconButton(
-              onPressed: () {
-                Scaffold.of(context).openDrawer();
-              },
-              icon: Icon(Icons.menu),
-            );
-          },
-        ),
       ),
       drawer: Drawer(
         width: 300,
@@ -262,14 +307,16 @@ class _DataPageState extends State<DataPage> {
           children: [
             DrawerHeader(
               child: Center(
-                child: Image.asset(AssetsData.splashImage, height: 300, width: 300)
+                child:
+                Image.asset(AssetsData.splashImage, height: 300, width: 300),
               ),
             ),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 children: [
-                  _buildCardDrawerItem(Icons.play_circle_fill, "Run Time Mode", 1),
+                  _buildCardDrawerItem(
+                      Icons.play_circle_fill, "Run Time Mode", 1),
                   _buildCardDrawerItem(Icons.plus_one, "Count Mode", 2),
                   _buildCardDrawerItem(Icons.wb_shade, "Shade Mode", 3),
                   _buildCardDrawerItem(Icons.sync, "Pendulum Mode", 4),
@@ -279,105 +326,121 @@ class _DataPageState extends State<DataPage> {
             const Divider(color: Colors.white30),
             const Padding(
               padding: EdgeInsets.all(12),
-              child: Text(
-                'Powered By © 2025 ChemTech',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
+              child: Text('Powered By © 2025 ChemTech',
+                  style: TextStyle(fontSize: 12, color: Colors.grey)),
             ),
           ],
         ),
       ),
-
-      body: OrientationBuilder(
-        builder: (context, orientation) {
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              bool isLandscape = orientation == Orientation.landscape;
-
-              return Stack(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: isLandscape
-                        ? Row(
-                      children: [
-                        Expanded(
-                          child: DataForm(
-                            flag1: flag1Controller,
-                            flag2: flag2Controller,
-                            v1: value1Controller,
-                            v2: value2Controller,
-                            v3: value3Controller,
-                            isEditingDisabled: receivedData.flag1 == 1,
-                            onSendPressed: sendData,
-                          ),
-                        ),
-                        Space.w20,
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            ElevatedButton.icon(
-                              onPressed: (receivedData.flag1 >= 1 && receivedData.flag1 <= 4) ? handleModeAction : null,
-                              icon: Icon(
-                                (receivedData.flag1 == 1 || receivedData.flag1 == 3)
-                                    ? (receivedData.flag2 == 1 ? Icons.stop : Icons.play_arrow)
-                                    : Icons.refresh,
-                                color: Colors.white,
-                              ),
-                              label: Text(
-                                (receivedData.flag1 == 1 || receivedData.flag1 == 3)
-                                    ? (receivedData.flag2 == 1 ? "Stop" : "Start")
-                                    : "Reset",
-                                style: TextStyle(color: Colors.white),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: kSecondaryColor,
-                                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 30),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    )
-                        : ListView(
-                      children: [
-                        DataForm(
-                          flag1: flag1Controller,
-                          flag2: flag2Controller,
-                          v1: value1Controller,
-                          v2: value2Controller,
-                          v3: value3Controller,
-                          isEditingDisabled: receivedData.flag1 == 1,
-                          onSendPressed: sendData,
-                        ),
-                        Space.h20,
-                        ElevatedButton.icon(
-                          onPressed: (receivedData.flag1 >= 1 && receivedData.flag1 <= 4) ? handleModeAction : null,
-                          icon: Icon(
-                            (receivedData.flag1 == 1 || receivedData.flag1 == 3)
-                                ? (receivedData.flag2 == 1 ? Icons.stop : Icons.play_arrow)
-                                : Icons.refresh,
-                            color: Colors.white,
-                          ),
-                          label: Text(
-                            (receivedData.flag1 == 1 || receivedData.flag1 == 3)
-                                ? (receivedData.flag2 == 1 ? "Stop" : "Start")
-                                : "Reset",
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: kSecondaryColor,
-                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              );
+      body: ListView(
+        padding: const EdgeInsets.all(10),
+        children: [
+          Card(
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            color: _currentConnectionState == BluetoothConnectionState.connected
+                ? Colors.green.shade50
+                : Colors.red.shade50,
+            child: ListTile(
+              leading: Icon(
+                _currentConnectionState == BluetoothConnectionState.connected
+                    ? Icons.bluetooth_connected
+                    : Icons.bluetooth_disabled,
+                color: _currentConnectionState == BluetoothConnectionState.connected
+                    ? Colors.green
+                    : Colors.red,
+                size: 28,
+              ),
+              title: Text(
+                  _currentConnectionState == BluetoothConnectionState.connected
+                      ? "Connected to: $deviceName"
+                      : "Disconnected from: $deviceName",
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text(
+                  _currentConnectionState == BluetoothConnectionState.connected
+                      ? "Device is ready for commands"
+                      : "Device is not connected"),
+            ),
+          ),
+          const SizedBox(height: 16),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 500),
+            switchInCurve: Curves.easeInOut,
+            transitionBuilder: (child, animation) {
+              final index = _animationIndex % 3;
+              if (index == 0) {
+                return SlideTransition(
+                  position: Tween<Offset>(
+                      begin: const Offset(-1.0, 0.0), end: Offset.zero)
+                      .animate(animation),
+                  child: child,
+                );
+              } else if (index == 1) {
+                return SlideTransition(
+                  position: Tween<Offset>(
+                      begin: const Offset(1.0, 0.0), end: Offset.zero)
+                      .animate(animation),
+                  child: child,
+                );
+              } else {
+                return ScaleTransition(
+                  scale: animation,
+                  child: FadeTransition(opacity: animation, child: child),
+                );
+              }
             },
-          );
-        },
+            child: _dataReceived && _currentConnectionState == BluetoothConnectionState.connected
+                ? DataForm(
+              key: ValueKey("data-${receivedData.flag1}"),
+              flag1: flag1Controller,
+              flag2: flag2Controller,
+              v1: value1Controller,
+              v2: value2Controller,
+              v3: value3Controller,
+              isEditingDisabled: receivedData.flag1 == 1,
+              onSendPressed: sendData,
+            )
+                : const DataFormShimmer(key: ValueKey("shimmer")),
+          ),
+          Space.h20,
+          if (_dataReceived && _currentConnectionState == BluetoothConnectionState.connected)
+            Padding(
+              padding:
+              const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+              child: Center(
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 14),
+                    backgroundColor: kSecondaryColor,
+                    foregroundColor: kPrimaryColor,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: (receivedData.flag1 >= 1 &&
+                      receivedData.flag1 <= 4)
+                      ? _handleModeAction
+                      : null,
+                  icon: Icon(
+                    (receivedData.flag1 == 1 || receivedData.flag1 == 3)
+                        ? (receivedData.flag2 == 1
+                        ? Icons.stop
+                        : Icons.play_arrow)
+                        : Icons.refresh,
+                    color: kPrimaryColor,
+                  ),
+                  label: Text(
+                    (receivedData.flag1 == 1 || receivedData.flag1 == 3)
+                        ? (receivedData.flag2 == 1 ? "Stop" : "Start")
+                        : "Reset",
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -387,15 +450,12 @@ class _DataPageState extends State<DataPage> {
       color: kSecondaryColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding:
+        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: Icon(icon, size: 30, color: Colors.white),
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+        title: Text(title,
+            style: const TextStyle(
+                fontWeight: FontWeight.bold, color: Colors.white)),
         onTap: () {
           Navigator.pop(context);
           _changeMode(mode);
@@ -403,5 +463,4 @@ class _DataPageState extends State<DataPage> {
       ),
     );
   }
-
 }

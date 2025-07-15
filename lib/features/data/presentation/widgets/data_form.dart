@@ -1,7 +1,6 @@
 import 'package:animated_digit/animated_digit.dart';
-import 'package:chem_tech_gravity_app/core/utils/constants.dart';
 import 'package:flutter/material.dart';
-import '../../../../core/utils/spacing.dart';
+import '../../../../core/utils/constants.dart';
 
 class DataForm extends StatelessWidget {
   final TextEditingController flag1;
@@ -38,33 +37,34 @@ class DataForm extends StatelessWidget {
     }
   }
 
+  IconData _getModeIcon(String flag1) {
+    switch (flag1) {
+      case '1':
+        return Icons.play_circle_fill;
+      case '2':
+        return Icons.plus_one;
+      case '3':
+        return Icons.wb_shade;
+      case '4':
+        return Icons.sync;
+      default:
+        return Icons.help_outline;
+    }
+  }
+
   Widget _buildItem(String label, String value) {
     final doubleVal = double.tryParse(value) ?? 0;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+        Text(label, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
         AnimatedDigitWidget(
-          value: doubleVal ?? 0.0,
-          textStyle: const TextStyle(
-            fontSize: 25,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-          ),
-          duration: const Duration(milliseconds: 600),
-          curve: Curves.easeOut,
-          fractionDigits: ((doubleVal ?? 0.0) % 1 == 0) ? 0 : 2,
+          value: doubleVal,
+          textStyle: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+          duration: const Duration(milliseconds: 500),
+          fractionDigits: doubleVal % 1 == 0 ? 0 : 2,
         ),
-
-
       ],
     );
   }
@@ -73,50 +73,60 @@ class DataForm extends StatelessWidget {
   Widget build(BuildContext context) {
     final mode = flag1.text;
     final modeName = _getModeName(mode);
-    final screenWidth = MediaQuery.of(context).size.width;
+    final modeIcon = _getModeIcon(mode);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Space.h20,
-          Text(
-            "Mode Selected: $modeName",
-            style: TextStyle(
-              fontSize: screenWidth * 0.05,
-              fontWeight: FontWeight.bold,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Card(
+          color: Colors.blueGrey.shade50,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 3,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: kSecondaryColor,
+                  radius: 24,
+                  child: Icon(modeIcon, color: Colors.white, size: 28),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    "Mode Selected:\n$modeName",
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+              ],
             ),
           ),
-          Space.h20,
-          Card(
-
-            color: kSecondaryColor,
-            elevation: 6,
-            margin: const EdgeInsets.symmetric(vertical: 20),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: (mode == '4')
-                  ? _buildItem("Oscillate", v1.text)
-                  : (mode == '2')
-                  ? _buildItem("Counter", v1.text)
-                  : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildItem("T1", v1.text),
-                  Space.h20,
-                  _buildItem("T2", v2.text),
-                  Space.h20,
-                  _buildItem("∆T", v3.text),
-                ],
-              ),
+        ),
+        const SizedBox(height: 20),
+        Card(
+          color: kSecondaryColor,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 4,
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: (mode == '4')
+                ? _buildItem("Oscillate", v1.text)
+                : (mode == '2')
+                ? _buildItem("Counter", v1.text)
+                : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildItem("T1", v1.text),
+                const SizedBox(height: 16),
+                _buildItem("T2", v2.text),
+                const SizedBox(height: 16),
+                _buildItem("ΔT", v3.text),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

@@ -231,7 +231,7 @@ class _ScanButtonState extends State<ScanButton>
         ),
         const SizedBox(height: 30),
         Container(
-          margin: const EdgeInsets.symmetric(horizontal: 40),
+          margin: const EdgeInsets.symmetric(horizontal: 10),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),

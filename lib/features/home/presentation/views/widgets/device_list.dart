@@ -111,7 +111,6 @@ class _DeviceListState extends State<DeviceList> {
     }
   }
 
-
   // Future<void> _handleDeviceTap(BuildContext context, BluetoothDevice device) async {
   //   setState(() {
   //     _connectionStatuses[device.id.id] = ConnectionStatus.connecting;

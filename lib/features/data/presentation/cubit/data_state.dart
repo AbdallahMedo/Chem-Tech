@@ -1,6 +1,3 @@
-
-
-// Abstract class representing the various states for data-related operations.
 import '../../models/data_struct.dart';
 
 abstract class DataState {

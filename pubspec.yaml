@@ -51,6 +51,7 @@ dependencies:
   url_launcher: ^6.3.1
   video_player: ^2.9.5
   app_settings: ^6.1.1
+  shimmer: ^3.0.0
 
 
 
@@ -67,7 +68,7 @@ dev_dependencies:
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/images/colord_logo.png"
+  image_path: "assets/images/ChemTech.png"
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
