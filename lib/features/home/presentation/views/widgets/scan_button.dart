@@ -117,7 +117,6 @@ class _ScanButtonState extends State<ScanButton>
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // Ripple background effect (only when scanning)
                 if (widget.isScanning)
                   AnimatedBuilder(
                     animation: _controller,

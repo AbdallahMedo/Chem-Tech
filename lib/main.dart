@@ -1,7 +1,7 @@
 import 'package:chem_tech_gravity_app/core/utils/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:flutter_bloc/flutter_bloc.dart'; // Add the flutter_bloc package
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'core/id/service_locator.dart';
 import 'features/data/presentation/cubit/data_cubit.dart';
@@ -29,7 +29,7 @@ class MyApp extends StatelessWidget {
       child: GetMaterialApp(
         theme: ThemeData.light().copyWith(scaffoldBackgroundColor: kPrimaryColor,),
         debugShowCheckedModeBanner: false,
-        home: const SplashView(), // Splash screen that will use SplashCubit
+        home: const SplashView(),
       ),
     );
   }

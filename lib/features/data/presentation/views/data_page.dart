@@ -253,27 +253,20 @@ class _DataPageState extends State<DataPage> {
     flag1Controller.text = mode.toString();
     flag2Controller.text = '2';
     await sendData();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Switched to ${_getModeName(mode)}"),
-        backgroundColor: kSecondaryColor,
-        duration: const Duration(milliseconds: 800),
-      ),
-    );
   }
 
-  String _getModeName(int mode) {
-    switch (mode) {
-      case 1:
-        return "Run Time";
-      case 2:
-        return "Count";
-      case 3:
-        return "Shade";
-      case 4:
-        return "Pendulum";
+  Color _getModeColor(String flag1) {
+    switch (flag1) {
+      case '1':
+        return Colors.green;
+      case '2':
+        return Colors.blue;
+      case '3':
+        return Colors.orange;
+      case '4':
+        return Colors.purple;
       default:
-        return "Unknown";
+        return Colors.grey;
     }
   }
 
@@ -410,23 +403,20 @@ class _DataPageState extends State<DataPage> {
               child: Center(
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 14),
-                    backgroundColor: kSecondaryColor,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    backgroundColor: _getModeColor(receivedData.flag1.toString()),
                     foregroundColor: kPrimaryColor,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  onPressed: (receivedData.flag1 >= 1 &&
-                      receivedData.flag1 <= 4)
+                  onPressed: (receivedData.flag1 >= 1 && receivedData.flag1 <= 4)
                       ? _handleModeAction
                       : null,
                   icon: Icon(
                     (receivedData.flag1 == 1 || receivedData.flag1 == 3)
-                        ? (receivedData.flag2 == 1
-                        ? Icons.stop
-                        : Icons.play_arrow)
+                        ? (receivedData.flag2 == 1 ? Icons.stop : Icons.play_arrow)
                         : Icons.refresh,
                     color: kPrimaryColor,
                   ),
@@ -434,10 +424,10 @@ class _DataPageState extends State<DataPage> {
                     (receivedData.flag1 == 1 || receivedData.flag1 == 3)
                         ? (receivedData.flag2 == 1 ? "Stop" : "Start")
                         : "Reset",
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
+
               ),
             ),
         ],

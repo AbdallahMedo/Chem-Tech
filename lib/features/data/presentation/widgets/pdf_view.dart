@@ -26,7 +26,7 @@ class _PdfViewState extends State<PdfView> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
-        title: const Text('PDF Preview'),
+        title: const Text('Photo Gate'),
       ),
       body: Stack(
         children: [

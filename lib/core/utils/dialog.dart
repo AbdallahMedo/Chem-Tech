@@ -1,8 +1,7 @@
-// core/utils/dialog_utils.dart
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 
 /// Shows a generic alert dialog
+final List<Widget>buttons=[];
 Future<void> showAlertDialog({
   required BuildContext context,
   required String title,

@@ -1,3 +1,4 @@
+import 'package:chem_tech_gravity_app/core/utils/dialog.dart';
 import 'package:chem_tech_gravity_app/features/home/presentation/views/widgets/signal_info.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -56,8 +57,10 @@ class _DeviceListState extends State<DeviceList> {
       ),
     );
   }
+
   ///serial photo gate
-  Future<void> _handleDeviceTap(BuildContext context, BluetoothDevice device) async {
+  Future<void> _handleDeviceTap(
+      BuildContext context, BluetoothDevice device) async {
     final deviceName = device.name.trim();
 
     /// Check for exact format: PhG_ct-FFFF where F is hex from 0000 to FFFF
@@ -111,49 +114,27 @@ class _DeviceListState extends State<DeviceList> {
     }
   }
 
-  // Future<void> _handleDeviceTap(BuildContext context, BluetoothDevice device) async {
-  //   setState(() {
-  //     _connectionStatuses[device.id.id] = ConnectionStatus.connecting;
-  //   });
-  //
-  //   try {
-  //     BluetoothConnectionState connectionState = await device.state.first;
-  //
-  //     if (connectionState == BluetoothConnectionState.connected) {
-  //       setState(() {
-  //         _connectionStatuses[device.id.id] = ConnectionStatus.connected;
-  //       });
-  //       _showAlreadyConnectedDialog(context);
-  //     } else {
-  //       await device.connect(autoConnect: false);
-  //       setState(() {
-  //         _connectionStatuses[device.id.id] = ConnectionStatus.connected;
-  //       });
-  //       getx.Get.to(() => BottomNavigationBarView(device));
-  //     }
-  //   } catch (e) {
-  //     setState(() {
-  //       _connectionStatuses[device.id.id] = ConnectionStatus.disconnected;
-  //     });
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text('Connection failed: ${e.toString()}')),
-  //     );
-  //   }
-  // }
-
   void _showAlreadyConnectedDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Connection Error'),
-        content: const Text('This device is already connected to another device.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
+    // showDialog(
+    //   context: context,
+    //   builder: (context) => AlertDialog(
+    //     title: const Text('Connection Error'),
+    //     content:
+    //         const Text('This device is already connected to another device.'),
+    //     actions: [
+    //       TextButton(
+    //         onPressed: () => Navigator.pop(context),
+    //         child: const Text('OK'),
+    //       ),
+    //     ],
+    //   ),
+    // );
+    showAlertDialog(
+        context: context,
+        title: 'Connection Error',
+        message: 'This device is already connected to another device.',
+      onConfirm: () => Navigator.pop(context),
+      confirmText: "OK"
     );
   }
 }
@@ -182,9 +163,8 @@ class _BluetoothDeviceCard extends StatelessWidget {
   String calculateDistance(int rssi) {
     double txPower = -59;
     double ratio = rssi / txPower;
-    double distance = (ratio < 1.0)
-        ? ratio * ratio
-        : 0.89976 * (ratio * ratio) + 0.111;
+    double distance =
+        (ratio < 1.0) ? ratio * ratio : 0.89976 * (ratio * ratio) + 0.111;
     return distance.toStringAsFixed(1);
   }
 
@@ -277,15 +257,15 @@ class _BluetoothDeviceCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         mac,
-                        style: const TextStyle(
-                            color: Colors.grey, fontSize: 13),
+                        style:
+                            const TextStyle(color: Colors.grey, fontSize: 13),
                       ),
                     ],
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12),
@@ -332,4 +312,3 @@ class _BluetoothDeviceCard extends StatelessWidget {
     );
   }
 }
-

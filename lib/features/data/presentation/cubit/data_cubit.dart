@@ -7,32 +7,27 @@ class DataCubit extends Cubit<DataState> {
   BluetoothCharacteristic? rxChar;
   BluetoothCharacteristic? txChar;
 
-  // Initialize the cubit with the device
   DataCubit({this.device}) : super(DataInitial());
 
-  // Connect to the Bluetooth device and discover its services
   Future<void> connectToDevice(device) async {
     try {
-      emit(DataLoading());  // Show loading state when connecting
-
+      emit(DataLoading());
       await device.connect(autoConnect: false);
       List<BluetoothService> services = await device.discoverServices();
 
-      // Loop through services and find characteristics
       for (var service in services) {
         for (var characteristic in service.characteristics) {
           if (characteristic.properties.write) {
-            rxChar = characteristic;  // For sending data
+            rxChar = characteristic;
           }
           if (characteristic.properties.notify) {
-            txChar = characteristic;  // For receiving data
+            txChar = characteristic;
             await txChar!.setNotifyValue(true);
 
-            // Listen for data from the device
             txChar!.lastValueStream.listen((value) {
               if (value.length == 16) {
                 final receivedData = DataStruct.fromBytes(value);
-                emit(DataReceived(receivedData));  // Emit the received data
+                emit(DataReceived(receivedData));
               }
             });
           }
@@ -43,7 +38,6 @@ class DataCubit extends Cubit<DataState> {
     }
   }
 
-  // Send data to the Bluetooth device
   Future<void> sendData(DataStruct dataStruct) async {
     if (rxChar == null) {
       emit(DataError("No writable characteristic found"));
@@ -51,15 +45,14 @@ class DataCubit extends Cubit<DataState> {
     }
 
     try {
-      final bytes = dataStruct.toBytes();  // Convert DataStruct to bytes
+      final bytes = dataStruct.toBytes();
       await rxChar!.write(bytes, withoutResponse: false);
-      emit(DataSent("Data sent successfully"));  // Data was successfully sent
+      emit(DataSent("Data sent successfully"));
     } catch (e) {
       emit(DataError("Failed to send data: $e"));
     }
   }
 
-  // Disconnect from the device
   Future<void> disconnectFromDevice() async {
     await device!.disconnect();
   }
@@ -68,17 +61,13 @@ class DataCubit extends Cubit<DataState> {
 abstract class DataState {
   const DataState();
 
-  @override
   List<Object> get props => [];
 }
 
-// Initial state
 class DataInitial extends DataState {}
 
-// Loading state while connecting or sending data
 class DataLoading extends DataState {}
 
-// State when data has been sent successfully
 class DataSent extends DataState {
   final String message;
 
@@ -88,7 +77,6 @@ class DataSent extends DataState {
   List<Object> get props => [message];
 }
 
-// State when data is received from the device
 class DataReceived extends DataState {
   final DataStruct dataStruct;
 
@@ -98,7 +86,6 @@ class DataReceived extends DataState {
   List<Object> get props => [dataStruct];
 }
 
-// State when an error occurs
 class DataError extends DataState {
   final String errorMessage;
 

@@ -52,13 +52,31 @@ class DataForm extends StatelessWidget {
     }
   }
 
+  Color _getModeColor(String flag1) {
+    switch (flag1) {
+      case '1':
+        return Colors.green;
+      case '2':
+        return Colors.blue;
+      case '3':
+        return Colors.orange;
+      case '4':
+        return Colors.purple;
+      default:
+        return Colors.grey;
+    }
+  }
+
   Widget _buildItem(String label, String value) {
     final doubleVal = double.tryParse(value) ?? 0;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
         AnimatedDigitWidget(
           value: doubleVal,
           textStyle: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
@@ -74,6 +92,7 @@ class DataForm extends StatelessWidget {
     final mode = flag1.text;
     final modeName = _getModeName(mode);
     final modeIcon = _getModeIcon(mode);
+    final modeColor = _getModeColor(mode);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,15 +106,26 @@ class DataForm extends StatelessWidget {
             child: Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: kSecondaryColor,
+                  backgroundColor: _getModeColor(mode),
                   radius: 24,
                   child: Icon(modeIcon, color: Colors.white, size: 28),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: Text(
-                    "Mode Selected:\n$modeName",
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  child: RichText(
+                    text: TextSpan(
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      children: [
+                        const TextSpan(
+                          text: 'Mode Selected: ',
+                          style: TextStyle(color: Colors.black),
+                        ),
+                        TextSpan(
+                          text: modeName,
+                          style: TextStyle(color: modeColor),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -104,7 +134,7 @@ class DataForm extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         Card(
-          color: kSecondaryColor,
+          color: modeColor,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           elevation: 4,
           margin: const EdgeInsets.symmetric(vertical: 8),

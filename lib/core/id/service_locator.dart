@@ -6,18 +6,9 @@ import '../../features/splash/presentation/cubit/splash_cubit.dart';
 final sl = GetIt.instance;
 
 Future<void> setupServiceLocator() async {
-  // Cubits
+  /// Cubits
   sl.registerFactory(() => SplashCubit());
   sl.registerFactory(() => ScanCubit());
   sl.registerFactory(() => DataCubit());
 
-
-  /// Repositories
-  // sl.registerLazySingleton<YourRepository>(() => YourRepositoryImpl());
-
-  // Use Cases
-  // sl.registerLazySingleton<YourUseCase>(() => YourUseCase(repository: sl()));
-
-  // Services
-  // sl.registerLazySingleton<YourService>(() => YourService());
 }
